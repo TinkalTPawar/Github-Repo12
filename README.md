@@ -1,0 +1,1 @@
+This repository contains a Jenkins pipeline and a CloudFormation template to deploy AWS infrastructure including VPC, Subnet, Internet Gateway, Route Table, Security Group, and EC2 Instance.
