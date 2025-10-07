@@ -1,0 +1,43 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+    AWS_DEFAULT_REGION = 'us-east-1'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git 'https://github.com/TinkalTPawar/Github-Repo.git'
+      }
+    }
+
+    stage('Build') {
+      steps {
+        echo 'Validating CloudFormation template...'
+        sh 'aws cloudformation validate-template --template-body file://network-ec2.yaml'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        echo 'Deploying CloudFormation stack...'
+        sh '''
+          aws cloudformation deploy \
+            --template-file network-ec2.yaml \
+            --stack-name MyInfraStack \
+            --capabilities CAPABILITY_NAMED_IAM
+        '''
+      }
+    }
+
+    stage('Test') {
+      steps {
+        echo 'Testing EC2 instance...'
+        sh 'aws ec2 describe-instances --filters Name=tag:Name,Values=MyEC2'
+      }
+    }
+  }
+}
