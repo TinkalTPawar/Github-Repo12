@@ -1,3 +1,53 @@
+// pipeline {
+//   agent any
+
+//   environment {
+//     AWS_DEFAULT_REGION = 'us-east-1'
+//   }
+
+//   stages {
+//     stage('Checkout') {
+//       steps {
+//         git branch: 'main', url: 'https://github.com/TinkalTPawar/Github-Repo12.git'
+//       }
+//     }
+
+//     stage('Build') {
+//       steps {
+//         echo 'Validating CloudFormation template...'
+//         withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+//           sh 'aws cloudformation validate-template --template-body file://network-vpc.yaml'
+//         }
+//       }
+//     }
+
+//     stage('Deploy') {
+//       steps {
+//         echo 'Deploying CloudFormation stack...'
+//         withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+//           sh '''
+//             aws cloudformation deploy \
+//             --template-file network-vpc.yaml \
+//             --stack-name MyInfraStack \
+//             --capabilities CAPABILITY_NAMED_IAM
+//           '''
+//         }
+//       }
+//     }
+
+//     stage('Test') {
+//       steps {
+//         echo 'Testing EC2 instance...'
+//         withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+//           sh 'aws ec2 describe-instances --filters Name=tag:Name,Values=MyEC2'
+//         }
+//       }
+//     }
+//   }
+// }
+
+
+
 pipeline {
   agent any
 
@@ -15,7 +65,7 @@ pipeline {
     stage('Build') {
       steps {
         echo 'Validating CloudFormation template...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
           sh 'aws cloudformation validate-template --template-body file://network-vpc.yaml'
         }
       }
@@ -24,7 +74,7 @@ pipeline {
     stage('Deploy') {
       steps {
         echo 'Deploying CloudFormation stack...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
           sh '''
             aws cloudformation deploy \
             --template-file network-vpc.yaml \
@@ -38,7 +88,7 @@ pipeline {
     stage('Test') {
       steps {
         echo 'Testing EC2 instance...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
           sh 'aws ec2 describe-instances --filters Name=tag:Name,Values=MyEC2'
         }
       }
