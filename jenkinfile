@@ -1,87 +1,70 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    AWS_DEFAULT_REGION = 'us-east-1'
-    STACK_NAME = 'MyInfraStack'
-    TEMPLATE_FILE = 'network-vpc.yaml'
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        git branch: 'main', url: 'https://github.com/TinkalTPawar/Github-Repo12.git'
-      }
+    environment {
+        STACK_NAME = 'MyInfraStack'
+        TEMPLATE_FILE = 'network-vpc.yaml'
+        REGION = 'us-east-1'
     }
 
-    stage('Validate CloudFormation Template') {
-      steps {
-        echo 'Validating CloudFormation template...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''
-            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            aws cloudformation validate-template --template-body file://${TEMPLATE_FILE}
-          '''
+    stages {
+        stage('Clone GitHub Repository') {
+            steps {
+                git url: 'https://github.com/TinkalTPawar/Github-Repo12.git', branch: 'main'
+            }
         }
-      }
-    }
 
-    stage('Deploy CloudFormation Stack') {
-      steps {
-        echo 'Deploying CloudFormation stack...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''
-            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            aws cloudformation deploy \
-              --template-file ${TEMPLATE_FILE} \
-              --stack-name ${STACK_NAME} \
-              --capabilities CAPABILITY_NAMED_IAM \
-              --region ${AWS_DEFAULT_REGION}
-          '''
+        stage('Validate CloudFormation Template') {
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    bat """
+                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                    aws cloudformation validate-template ^
+                      --template-body file://${TEMPLATE_FILE}
+                    """
+                }
+            }
         }
-      }
-    }
 
-    stage('Describe Stack Outputs') {
-      steps {
-        echo 'Describing CloudFormation stack outputs...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''
-            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            aws cloudformation describe-stacks \
-              --stack-name ${STACK_NAME} \
-              --region ${AWS_DEFAULT_REGION} \
-              --query "Stacks[0].Outputs"
-          '''
+        stage('Deploy CloudFormation Stack') {
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    bat """
+                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                    aws cloudformation deploy ^
+                      --template-file ${TEMPLATE_FILE} ^
+                      --stack-name ${STACK_NAME} ^
+                      --capabilities CAPABILITY_NAMED_IAM ^
+                      --region ${REGION}
+                    """
+                }
+            }
         }
-      }
-    }
 
-    stage('Test EC2 Instance') {
-      steps {
-        echo 'Testing EC2 instance...'
-        withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-          sh '''
-            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            aws ec2 describe-instances \
-              --filters Name=tag:Name,Values=MyEC2 \
-              --region ${AWS_DEFAULT_REGION}
-          '''
+        stage('Describe Stack Outputs') {
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    bat """
+                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                    aws cloudformation describe-stacks ^
+                      --stack-name ${STACK_NAME} ^
+                      --region ${REGION} ^
+                      --query "Stacks[0].Outputs"
+                    """
+                }
+            }
         }
-      }
     }
-  }
 
-  post {
-    success {
-      echo 'Pipeline completed successfully.'
+    post {
+        failure {
+            echo 'The pipeline has failed.'
+        }
+        success {
+            echo 'The pipeline has succeeded.'
+        }
     }
-    failure {
-      echo 'Pipeline failed.'
-    }
-  }
 }
