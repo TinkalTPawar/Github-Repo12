@@ -16,7 +16,7 @@ pipeline {
 
         stage('Validate CloudFormation Template') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     bat """
                     set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
                     set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
@@ -29,7 +29,7 @@ pipeline {
 
         stage('Deploy CloudFormation Stack') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     bat """
                     set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
                     set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
@@ -45,7 +45,7 @@ pipeline {
 
         stage('Describe Stack Outputs') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     bat """
                     set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
                     set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
