@@ -8,7 +8,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git 'https://github.com/TinkalTPawar/Github-Repo.git'
+        git 'https://github.com/TinkalTPawar/Github-Repo12.git'
       }
     }
 
