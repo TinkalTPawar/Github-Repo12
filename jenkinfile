@@ -17,7 +17,7 @@ pipeline {
     stage('Build') {
       steps {
         echo 'Validating CloudFormation template...'
-        sh 'aws cloudformation validate-template --template-body file://network-ec2.yaml'
+        sh 'aws cloudformation validate-template --template-body file://network-vpc.yaml'
       }
     }
 
@@ -26,7 +26,7 @@ pipeline {
         echo 'Deploying CloudFormation stack...'
         sh '''
           aws cloudformation deploy \
-            --template-file network-ec2.yaml \
+            --template-file network-vpc.yaml \
             --stack-name MyInfraStack \
             --capabilities CAPABILITY_NAMED_IAM
         '''
