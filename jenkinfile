@@ -5,11 +5,12 @@ pipeline {
     AWS_DEFAULT_REGION = 'us-east-1'
   }
 
-  stage('Checkout') {
-  steps {
-    git branch: 'main', url: 'https://github.com/TinkalTPawar/Github-Repo12.git'
-  }
-}
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/TinkalTPawar/Github-Repo12.git'
+      }
+    }
 
     stage('Build') {
       steps {
