@@ -1,68 +1,111 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: VPC with EC2 instance in us-east-1
-
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create VPC, Subnet, Route Table, Internet Gateway, Security Group, and EC2 Instance with Nginx installed
+ 
 Resources:
-  MyVPC:
+  VPCMain:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.0.0.0/16
       Tags:
         - Key: Name
-          Value: MyVPC
-
-  MySubnet:
+          Value: VPC-Main
+ 
+  SubnetPublicAZ1:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: us-east-1a
-
-  MyInternetGateway:
+      VpcId: !Ref VPCMain
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Subnet-Public-AZ1
+ 
+  IGWMain:
     Type: AWS::EC2::InternetGateway
-
-  AttachGateway:
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW-Main
+ 
+  AttachIGW:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref MyVPC
-      InternetGatewayId: !Ref MyInternetGateway
-
-  MyRouteTable:
+      VpcId: !Ref VPCMain
+      InternetGatewayId: !Ref IGWMain
+ 
+  RouteTablePublic:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref MyVPC
-
-  MyRoute:
+      VpcId: !Ref VPCMain
+      Tags:
+        - Key: Name
+          Value: RouteTable-Public
+ 
+  RouteToInternet:
     Type: AWS::EC2::Route
+    DependsOn: AttachIGW
     Properties:
-      RouteTableId: !Ref MyRouteTable
+      RouteTableId: !Ref RouteTablePublic
       DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref MyInternetGateway
-
+      GatewayId: !Ref IGWMain
+ 
   SubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref MySubnet
-      RouteTableId: !Ref MyRouteTable
-
-  MySecurityGroup:
+      SubnetId: !Ref SubnetPublicAZ1
+      RouteTableId: !Ref RouteTablePublic
+ 
+  SGSSHAccess:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow SSH
-      VpcId: !Ref MyVPC
+      GroupDescription: Allow SSH and HTTP access
+      VpcId: !Ref VPCMain
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
-
-  MyEC2Instance:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SG-SSH-Access
+ 
+  EC2WebServer:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
-      ImageId: ami-0c94855ba95c71c99  # Amazon Linux 2 AMI for us-east-1
-      KeyName: gitaccess-01
-      SubnetId: !Ref MySubnet
+      KeyName: gitaccess-01 # Replace with your actual key name
+      ImageId: ami-052064a798f08f0d3 # Replace with valid AMI ID for your region
+      SubnetId: !Ref SubnetPublicAZ1
       SecurityGroupIds:
-        - !Ref MySecurityGroup
+        - !Ref SGSSHAccess
       Tags:
         - Key: Name
+          Value: EC2-WebServer
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo dnf update -y
+          sudo dnf install nginx -y
+          sudo systemctl start nginx
+          sudo systemctl enable nginx
+          sudo firewall-cmd --permanent --add-service=http
+          sudo firewall-cmd --reload
+ 
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPCMain
+ 
+  EC2InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2WebServer
+ 
+ 
