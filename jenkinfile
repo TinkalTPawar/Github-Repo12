@@ -72,10 +72,24 @@ pipeline {
                     bat """
                     set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
                     set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
-                    aws cloudformation deploy ^
-                      --template-url ${TEMPLATE_URL} ^
+                    aws cloudformation create-stack ^
                       --stack-name ${STACK_NAME} ^
+                      --template-url ${TEMPLATE_URL} ^
                       --capabilities CAPABILITY_NAMED_IAM ^
+                      --region ${REGION}
+                    """
+                }
+            }
+        }
+
+        stage('Wait for Stack Completion') {
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    bat """
+                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                    aws cloudformation wait stack-create-complete ^
+                      --stack-name ${STACK_NAME} ^
                       --region ${REGION}
                     """
                 }
