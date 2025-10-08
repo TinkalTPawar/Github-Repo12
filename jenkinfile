@@ -5,6 +5,9 @@ pipeline {
         STACK_NAME = 'MyInfraStack'
         TEMPLATE_FILE = 'network-vpc.yaml'
         REGION = 'us-east-1'
+        S3_BUCKET = 'cf-templates-tinkal' // Replace with your desired bucket name
+        S3_KEY = 'templates/network-vpc.yaml'
+        TEMPLATE_URL = "https://${S3_BUCKET}.s3.${REGION}.amazonaws.com/${S3_KEY}"
     }
 
     stages {
@@ -14,14 +17,40 @@ pipeline {
             }
         }
 
-        stage('Validate CloudFormation Template') {
+        stage('Ensure S3 Bucket Exists') {
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    bat """
+                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                    aws s3api head-bucket --bucket ${S3_BUCKET} || ^
+                    aws s3api create-bucket --bucket ${S3_BUCKET} --region ${REGION} ^
+                      --create-bucket-configuration LocationConstraint=${REGION}
+                    """
+                }
+            }
+        }
+
+        stage('Upload Template to S3') {
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    bat """
+                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                    aws s3 cp ${TEMPLATE_FILE} s3://${S3_BUCKET}/${S3_KEY}
+                    """
+                }
+            }
+        }
+
+        stage('Validate CloudFormation Template from S3') {
             steps {
                 withAWS(credentials: 'aws-credentials', region: "${REGION}") {
                     bat """
                     set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
                     set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
                     aws cloudformation validate-template ^
-                      --template-body file://${TEMPLATE_FILE}
+                      --template-url ${TEMPLATE_URL}
                     """
                 }
             }
@@ -34,7 +63,7 @@ pipeline {
                     set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
                     set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
                     aws cloudformation deploy ^
-                      --template-file ${TEMPLATE_FILE} ^
+                      --template-url ${TEMPLATE_URL} ^
                       --stack-name ${STACK_NAME} ^
                       --capabilities CAPABILITY_NAMED_IAM ^
                       --region ${REGION}
