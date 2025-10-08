@@ -5,7 +5,7 @@ pipeline {
         STACK_NAME = 'MyInfraStack'
         TEMPLATE_FILE = 'network-vpc.yaml'
         REGION = 'us-east-1'
-        S3_BUCKET = 'cf-templates-tinkal' // Replace with your desired bucket name
+        S3_BUCKET = 'generalbucket-list12'
         S3_KEY = 'templates/network-vpc.yaml'
         TEMPLATE_URL = "https://${S3_BUCKET}.s3.${REGION}.amazonaws.com/${S3_KEY}"
     }
@@ -20,13 +20,23 @@ pipeline {
         stage('Ensure S3 Bucket Exists') {
             steps {
                 withAWS(credentials: 'aws-credentials', region: "${REGION}") {
-                    bat """
-                    set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
-                    set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
-                    aws s3api head-bucket --bucket ${S3_BUCKET} || ^
-                    aws s3api create-bucket --bucket ${S3_BUCKET} --region ${REGION} ^
-                      --create-bucket-configuration LocationConstraint=${REGION}
-                    """
+                    script {
+                        def bucketExists = bat(
+                            script: """
+                            set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                            set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                            aws s3api head-bucket --bucket ${S3_BUCKET}
+                            """,
+                            returnStatus: true
+                        )
+                        if (bucketExists != 0) {
+                            bat """
+                            set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
+                            set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
+                            aws s3api create-bucket --bucket ${S3_BUCKET} --region ${REGION}
+                            """
+                        }
+                    }
                 }
             }
         }
